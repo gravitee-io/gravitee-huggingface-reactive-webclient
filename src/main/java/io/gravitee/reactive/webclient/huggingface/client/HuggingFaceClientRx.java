@@ -13,11 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.huggingface.reactive.webclient.exception;
+package io.gravitee.reactive.webclient.huggingface.client;
 
-public class ModelDownloadFailedException extends RuntimeException {
+import io.reactivex.rxjava3.core.Completable;
+import io.reactivex.rxjava3.core.Flowable;
+import io.vertx.rxjava3.core.buffer.Buffer;
+import io.vertx.rxjava3.core.streams.WriteStream;
 
-    public ModelDownloadFailedException(String message, Throwable cause) {
-        super(message);
-    }
+public interface HuggingFaceClientRx {
+    Flowable<String> listModelFiles(String modelName);
+
+    Completable downloadModelFile(String modelName, String fileName, WriteStream<Buffer> file);
 }

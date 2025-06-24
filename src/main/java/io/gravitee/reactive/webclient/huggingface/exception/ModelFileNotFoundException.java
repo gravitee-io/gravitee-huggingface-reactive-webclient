@@ -13,15 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.huggingface.reactive.webclient.client;
+package io.gravitee.reactive.webclient.huggingface.exception;
 
-import io.reactivex.rxjava3.core.Completable;
-import io.reactivex.rxjava3.core.Flowable;
-import io.vertx.rxjava3.core.buffer.Buffer;
-import io.vertx.rxjava3.core.streams.WriteStream;
+public class ModelFileNotFoundException extends RuntimeException {
 
-public interface HuggingFaceClientRx {
-    Flowable<String> listModelFiles(String modelName);
-
-    Completable downloadModelFile(String modelName, String fileName, WriteStream<Buffer> file);
+    public ModelFileNotFoundException(String message) {
+        super(message);
+    }
 }

@@ -13,11 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.huggingface.reactive.webclient.exception;
+package io.gravitee.reactive.webclient.api;
 
-public class ModelFileNotFoundException extends RuntimeException {
+import io.reactivex.rxjava3.core.Single;
+import java.util.Map;
 
-    public ModelFileNotFoundException(String message) {
-        super(message);
-    }
+/**
+ * @author Rémi SULTAN (remi.sultan at graviteesource.com)
+ * @author GraviteeSource Team
+ */
+public interface ModelFetcher {
+    Single<Map<ModelFileType, String>> fetchModel(FetchModelConfig config);
 }
