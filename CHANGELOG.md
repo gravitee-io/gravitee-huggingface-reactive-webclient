@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/gravitee-io/gravitee-huggingface-reactive-webclient/compare/1.0.0...1.1.0) (2025-06-24)
+
+
+### Features
+
+* introduce the modelFile and modelFetcher in the webclient library ([#3](https://github.com/gravitee-io/gravitee-huggingface-reactive-webclient/issues/3)) ([66bf256](https://github.com/gravitee-io/gravitee-huggingface-reactive-webclient/commit/66bf2560725c03ecf272cb65dafe6c903ea6614c))
+
 # 1.0.0 (2025-06-10)
 
 
