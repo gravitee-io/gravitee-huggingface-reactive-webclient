@@ -26,11 +26,11 @@
         <version>23.3.0</version>
     </parent>
 
-    <groupId>io.gravitee.huggingface</groupId>
-    <artifactId>gravitee-huggingface-reactive-webclient</artifactId>
+    <groupId>io.gravitee.reactive.webclient</groupId>
+    <artifactId>gravitee-reactive-webclient-huggingface</artifactId>
     <version>1.0.0</version>
 
-    <name>Gravitee.io APIM - HuggingFace - Reactive Webclient </name>
+    <name>Gravitee.io APIM - Reactive Webclient - HuggingFace</name>
 
     <properties>
         <gravitee-bom.version>8.3.15</gravitee-bom.version>
@@ -40,7 +40,6 @@
         <maven-plugin-prettier.version>0.22</maven-plugin-prettier.version>
         <maven-plugin-prettier.prettierjava.version>2.0.0</maven-plugin-prettier.prettierjava.version>
         <gravitee-inference-api.version>1.1.2</gravitee-inference-api.version>
-        <gravitee-resource-ai-model-api.version>2.0.0</gravitee-resource-ai-model-api.version>
         <wiremock.version>3.13.1</wiremock.version>
     </properties>
 
@@ -68,12 +67,6 @@
         </dependency>
 
         <!-- Gravitee.io API-->
-        <dependency>
-            <groupId>io.gravitee.resource</groupId>
-            <artifactId>gravitee-resource-ai-model-api</artifactId>
-            <version>${gravitee-resource-ai-model-api.version}</version>
-        </dependency>
-
         <dependency>
             <groupId>io.gravitee.inference.api</groupId>
             <artifactId>gravitee-inference-api</artifactId>

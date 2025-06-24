@@ -23,13 +23,13 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.gravitee.huggingface.reactive.webclient.client.VertxHuggingFaceClientRx;
-import io.gravitee.huggingface.reactive.webclient.downloader.HuggingFaceDownloader;
-import io.gravitee.huggingface.reactive.webclient.downloader.HuggingFaceDownloader.FetchModelConfig;
-import io.gravitee.huggingface.reactive.webclient.exception.ModelDownloadFailedException;
-import io.gravitee.huggingface.reactive.webclient.exception.ModelFileNotFoundException;
-import io.gravitee.resource.ai_model.api.model.ModelFile;
-import io.gravitee.resource.ai_model.api.model.ModelFileType;
+import io.gravitee.reactive.webclient.api.FetchModelConfig;
+import io.gravitee.reactive.webclient.api.ModelFile;
+import io.gravitee.reactive.webclient.api.ModelFileType;
+import io.gravitee.reactive.webclient.huggingface.client.VertxHuggingFaceClientRx;
+import io.gravitee.reactive.webclient.huggingface.downloader.HuggingFaceDownloader;
+import io.gravitee.reactive.webclient.huggingface.exception.ModelDownloadFailedException;
+import io.gravitee.reactive.webclient.huggingface.exception.ModelFileNotFoundException;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.core.Single;
@@ -60,10 +60,10 @@ class HuggingFaceDownloaderTest {
         var client = mock(VertxHuggingFaceClientRx.class);
         when(client.listModelFiles(modelName)).thenReturn(Flowable.just("config.json"));
 
-        var service = new HuggingFaceDownloader(vertx, new FetchModelConfig(modelName, List.of(file), modelDir), client);
+        var service = new HuggingFaceDownloader(vertx, client);
 
         service
-            .fetchModel()
+            .fetchModel(new FetchModelConfig(modelName, List.of(file), modelDir))
             .test()
             .awaitDone(5, TimeUnit.SECONDS)
             .assertComplete()
@@ -96,10 +96,10 @@ class HuggingFaceDownloaderTest {
         when(client.listModelFiles(modelName)).thenReturn(Flowable.just(file.name()));
         when(client.downloadModelFile(modelName, file.name(), asyncFile)).thenReturn(Completable.complete());
 
-        var fetcher = new HuggingFaceDownloader(vertx, new FetchModelConfig(modelName, List.of(file), modelDir), client);
+        var fetcher = new HuggingFaceDownloader(vertx, client);
 
         fetcher
-            .fetchModel()
+            .fetchModel(new FetchModelConfig(modelName, List.of(file), modelDir))
             .test()
             .awaitDone(5, TimeUnit.SECONDS)
             .assertComplete()
@@ -132,10 +132,10 @@ class HuggingFaceDownloaderTest {
         when(client.listModelFiles(modelName)).thenReturn(Flowable.just(file.name()));
         when(client.downloadModelFile(modelName, file.name(), asyncFile)).thenReturn(Completable.complete());
 
-        var fetcher = new HuggingFaceDownloader(vertx, new FetchModelConfig(modelName, List.of(file), modelDir), client);
+        var fetcher = new HuggingFaceDownloader(vertx, client);
 
         fetcher
-            .fetchModel()
+            .fetchModel(new FetchModelConfig(modelName, List.of(file), modelDir))
             .test()
             .awaitDone(5, TimeUnit.SECONDS)
             .assertComplete()
@@ -158,9 +158,9 @@ class HuggingFaceDownloaderTest {
         var client = mock(VertxHuggingFaceClientRx.class);
         when(client.listModelFiles(modelName)).thenReturn(Flowable.just("other_file.json"));
 
-        var fetcher = new HuggingFaceDownloader(mock(Vertx.class), new FetchModelConfig(modelName, List.of(file), modelDir), client);
+        var fetcher = new HuggingFaceDownloader(mock(Vertx.class), client);
 
-        fetcher.fetchModel().test().assertError(ModelFileNotFoundException.class);
+        fetcher.fetchModel(new FetchModelConfig(modelName, List.of(file), modelDir)).test().assertError(ModelFileNotFoundException.class);
     }
 
     @Test
@@ -185,8 +185,8 @@ class HuggingFaceDownloaderTest {
         when(client.downloadModelFile(modelName, "model.onnx", asyncFile))
             .thenReturn(Completable.error(new RuntimeException("network timeout")));
 
-        var fetcher = new HuggingFaceDownloader(vertx, new FetchModelConfig(modelName, List.of(file), modelDir), client);
+        var fetcher = new HuggingFaceDownloader(vertx, client);
 
-        fetcher.fetchModel().test().assertError(ModelDownloadFailedException.class);
+        fetcher.fetchModel(new FetchModelConfig(modelName, List.of(file), modelDir)).test().assertError(ModelDownloadFailedException.class);
     }
 }

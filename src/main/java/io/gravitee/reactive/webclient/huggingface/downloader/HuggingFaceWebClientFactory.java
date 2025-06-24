@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.huggingface.reactive.webclient.downloader;
+package io.gravitee.reactive.webclient.huggingface.downloader;
 
 import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.rxjava3.core.Vertx;

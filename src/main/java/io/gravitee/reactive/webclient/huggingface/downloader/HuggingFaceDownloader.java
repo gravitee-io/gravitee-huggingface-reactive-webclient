@@ -13,14 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.huggingface.reactive.webclient.downloader;
+package io.gravitee.reactive.webclient.huggingface.downloader;
 
-import io.gravitee.huggingface.reactive.webclient.client.VertxHuggingFaceClientRx;
-import io.gravitee.huggingface.reactive.webclient.exception.ModelDownloadFailedException;
-import io.gravitee.huggingface.reactive.webclient.exception.ModelFileNotFoundException;
-import io.gravitee.resource.ai_model.api.ModelFetcher;
-import io.gravitee.resource.ai_model.api.model.ModelFile;
-import io.gravitee.resource.ai_model.api.model.ModelFileType;
+import io.gravitee.reactive.webclient.api.FetchModelConfig;
+import io.gravitee.reactive.webclient.api.ModelFetcher;
+import io.gravitee.reactive.webclient.api.ModelFileType;
+import io.gravitee.reactive.webclient.huggingface.client.VertxHuggingFaceClientRx;
+import io.gravitee.reactive.webclient.huggingface.exception.ModelDownloadFailedException;
+import io.gravitee.reactive.webclient.huggingface.exception.ModelFileNotFoundException;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.core.Single;
 import io.vertx.core.file.OpenOptions;
@@ -28,7 +28,6 @@ import io.vertx.rxjava3.core.Vertx;
 import io.vertx.rxjava3.core.file.AsyncFile;
 import java.nio.file.Path;
 import java.util.EnumMap;
-import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,20 +38,18 @@ public class HuggingFaceDownloader implements ModelFetcher {
     private final Vertx vertx;
 
     private final VertxHuggingFaceClientRx modelDownloader;
-    private final FetchModelConfig config;
 
-    public HuggingFaceDownloader(Vertx vertx, FetchModelConfig config) {
-        this(vertx, config, new VertxHuggingFaceClientRx(HuggingFaceWebClientFactory.createDefaultClient(vertx)));
+    public HuggingFaceDownloader(Vertx vertx) {
+        this(vertx, new VertxHuggingFaceClientRx(HuggingFaceWebClientFactory.createDefaultClient(vertx)));
     }
 
-    public HuggingFaceDownloader(Vertx vertx, FetchModelConfig config, VertxHuggingFaceClientRx client) {
+    public HuggingFaceDownloader(Vertx vertx, VertxHuggingFaceClientRx client) {
         this.vertx = vertx;
-        this.config = config;
         this.modelDownloader = client;
     }
 
     @Override
-    public Single<Map<ModelFileType, String>> fetchModel() {
+    public Single<Map<ModelFileType, String>> fetchModel(FetchModelConfig config) {
         return modelDownloader
             .listModelFiles(config.modelName())
             .toList()
@@ -116,6 +113,4 @@ public class HuggingFaceDownloader implements ModelFetcher {
     private Single<AsyncFile> openFile(Path outputPath) {
         return vertx.fileSystem().rxOpen(outputPath.toString(), new OpenOptions().setCreate(true).setWrite(true).setTruncateExisting(true));
     }
-
-    public record FetchModelConfig(String modelName, List<ModelFile> modelFiles, Path modelDirectory) {}
 }

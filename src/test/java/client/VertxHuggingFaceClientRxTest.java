@@ -26,7 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.ThrowableAssert.catchThrowable;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
-import io.gravitee.huggingface.reactive.webclient.client.VertxHuggingFaceClientRx;
+import io.gravitee.reactive.webclient.huggingface.client.VertxHuggingFaceClientRx;
 import io.vertx.core.file.OpenOptions;
 import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.rxjava3.core.Vertx;
