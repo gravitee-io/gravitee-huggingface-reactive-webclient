@@ -25,7 +25,9 @@ import static org.mockito.Mockito.when;
 
 import io.gravitee.reactive.webclient.api.FetchModelConfig;
 import io.gravitee.reactive.webclient.api.ModelFile;
+import io.gravitee.reactive.webclient.api.ModelFileInfo;
 import io.gravitee.reactive.webclient.api.ModelFileType;
+import io.gravitee.reactive.webclient.api.ModelInfo;
 import io.gravitee.reactive.webclient.huggingface.client.VertxHuggingFaceClientRx;
 import io.gravitee.reactive.webclient.huggingface.downloader.HuggingFaceDownloader;
 import io.gravitee.reactive.webclient.huggingface.exception.ModelDownloadFailedException;
@@ -44,8 +46,12 @@ import org.junit.jupiter.api.Test;
 
 class HuggingFaceDownloaderTest {
 
+    // -------------------------------------------------------------------------
+    // fetchModel — existing behaviour
+    // -------------------------------------------------------------------------
+
     @Test
-    @DisplayName("Should skip download when file exists locally")
+    @DisplayName("fetchModel: skips download when file exists locally")
     void shouldSkipDownloadWhenFileExistsLocally() {
         String modelName = "test-model";
         ModelFile file = new ModelFile("config.json", ModelFileType.CONFIG);
@@ -77,7 +83,7 @@ class HuggingFaceDownloaderTest {
     }
 
     @Test
-    @DisplayName("Should download file when it does not exist locally")
+    @DisplayName("fetchModel: downloads file when it does not exist locally")
     void shouldDownloadFileWhenNotExistsLocally() {
         String modelName = "test-model";
         ModelFile file = new ModelFile("config.json", ModelFileType.CONFIG);
@@ -113,7 +119,7 @@ class HuggingFaceDownloaderTest {
     }
 
     @Test
-    @DisplayName("Should download file when it does not exist locally and is in a subdirectory")
+    @DisplayName("fetchModel: downloads file in subdirectory, creating parent dirs")
     void shouldDownloadFileWhenNotExistsLocallyAndWithinSubdirectory() {
         String modelName = "test-model";
         ModelFile file = new ModelFile("config/config.json", ModelFileType.CONFIG);
@@ -149,7 +155,7 @@ class HuggingFaceDownloaderTest {
     }
 
     @Test
-    @DisplayName("Should throw ModelFileNotFoundException when file is not available remotely")
+    @DisplayName("fetchModel: throws ModelFileNotFoundException when file absent on remote")
     void shouldThrowWhenFileNotAvailableRemotely() {
         String modelName = "test-model";
         ModelFile file = new ModelFile("missing.json", ModelFileType.MODEL);
@@ -164,7 +170,7 @@ class HuggingFaceDownloaderTest {
     }
 
     @Test
-    @DisplayName("Should throw ModelDownloadFailedException when download fails")
+    @DisplayName("fetchModel: throws ModelDownloadFailedException when download fails")
     void shouldThrowWhenDownloadFails() {
         String modelName = "test-model";
         ModelFile file = new ModelFile("model.onnx", ModelFileType.MODEL);
@@ -188,5 +194,139 @@ class HuggingFaceDownloaderTest {
         var fetcher = new HuggingFaceDownloader(vertx, client);
 
         fetcher.fetchModel(new FetchModelConfig(modelName, List.of(file), modelDir)).test().assertError(ModelDownloadFailedException.class);
+    }
+
+    // -------------------------------------------------------------------------
+    // fetchAllModelFiles — auto-discovery path
+    // -------------------------------------------------------------------------
+
+    @Test
+    @DisplayName("fetchAllModelFiles: downloads only files matching the predicate")
+    void shouldFetchOnlyMatchingFiles() {
+        String modelName = "bartowski/Llama-3.1-8B-GGUF";
+        Path modelDir = Path.of("temp-model-dir");
+
+        var modelInfo = new ModelInfo(
+            modelName,
+            false,
+            false,
+            List.of(
+                new ModelFileInfo("Llama-3.1-8B-Q4_K_M.gguf", 4_000_000_000L),
+                new ModelFileInfo("Llama-3.1-8B-Q8_0.gguf", 8_000_000_000L),
+                new ModelFileInfo("README.md", 2048L)
+            ),
+            null
+        );
+
+        var vertx = mock(Vertx.class);
+        var fileSystem = mock(FileSystem.class);
+        var asyncFile = mock(AsyncFile.class);
+
+        when(vertx.fileSystem()).thenReturn(fileSystem);
+        when(fileSystem.rxExists(any())).thenReturn(Single.just(false));
+        when(fileSystem.rxOpen(any(), any())).thenReturn(Single.just(asyncFile));
+        when(asyncFile.close()).thenReturn(Completable.complete());
+
+        var client = mock(VertxHuggingFaceClientRx.class);
+        when(client.fetchModelInfo(modelName)).thenReturn(Single.just(modelInfo));
+        when(client.downloadModelFile(eq(modelName), any(), eq(asyncFile))).thenReturn(Completable.complete());
+
+        var fetcher = new HuggingFaceDownloader(vertx, client);
+
+        // Only fetch Q4_K_M variant
+        List<String> result = fetcher
+            .fetchAllModelFiles(modelName, modelDir, name -> name.endsWith("Q4_K_M.gguf"))
+            .test()
+            .awaitDone(5, TimeUnit.SECONDS)
+            .assertComplete()
+            .assertNoErrors()
+            .values()
+            .get(0);
+
+        assertThat(result).hasSize(1).allMatch(p -> p.contains("Q4_K_M.gguf"));
+        verify(client).downloadModelFile(modelName, "Llama-3.1-8B-Q4_K_M.gguf", asyncFile);
+        verify(client, never()).downloadModelFile(eq(modelName), eq("Llama-3.1-8B-Q8_0.gguf"), any());
+        verify(client, never()).downloadModelFile(eq(modelName), eq("README.md"), any());
+    }
+
+    @Test
+    @DisplayName("fetchAllModelFiles: emits empty list when no files match predicate")
+    void shouldReturnEmptyListWhenNoFilesMatch() {
+        String modelName = "some-org/some-model";
+        Path modelDir = Path.of("temp-model-dir");
+
+        var modelInfo = new ModelInfo(modelName, false, false, List.of(new ModelFileInfo("model.safetensors", 10_000_000L)), null);
+
+        var client = mock(VertxHuggingFaceClientRx.class);
+        when(client.fetchModelInfo(modelName)).thenReturn(Single.just(modelInfo));
+
+        var fetcher = new HuggingFaceDownloader(mock(Vertx.class), client);
+
+        fetcher
+            .fetchAllModelFiles(modelName, modelDir, name -> name.endsWith(".gguf"))
+            .test()
+            .awaitDone(5, TimeUnit.SECONDS)
+            .assertComplete()
+            .assertNoErrors()
+            .assertValue(List::isEmpty);
+    }
+
+    @Test
+    @DisplayName("fetchAllModelFiles: skips files that already exist locally")
+    void shouldSkipAlreadyDownloadedFilesInFetchAll() {
+        String modelName = "bartowski/Llama-3.1-8B-GGUF";
+        Path modelDir = Path.of("temp-model-dir");
+
+        var modelInfo = new ModelInfo(
+            modelName,
+            false,
+            false,
+            List.of(new ModelFileInfo("Llama-3.1-8B-Q4_K_M.gguf", 4_000_000_000L)),
+            null
+        );
+
+        var vertx = mock(Vertx.class);
+        var fileSystem = mock(FileSystem.class);
+        when(vertx.fileSystem()).thenReturn(fileSystem);
+        when(fileSystem.rxExists(any())).thenReturn(Single.just(true)); // file already exists
+
+        var client = mock(VertxHuggingFaceClientRx.class);
+        when(client.fetchModelInfo(modelName)).thenReturn(Single.just(modelInfo));
+
+        var fetcher = new HuggingFaceDownloader(vertx, client);
+
+        fetcher
+            .fetchAllModelFiles(modelName, modelDir, name -> name.endsWith(".gguf"))
+            .test()
+            .awaitDone(5, TimeUnit.SECONDS)
+            .assertComplete()
+            .assertNoErrors()
+            .assertValue(result -> {
+                assertThat(result).hasSize(1).allMatch(p -> p.contains("Q4_K_M.gguf"));
+                return true;
+            });
+
+        verify(client, never()).downloadModelFile(any(), any(), any());
+    }
+
+    // -------------------------------------------------------------------------
+    // fetchModelInfo delegation
+    // -------------------------------------------------------------------------
+
+    @Test
+    @DisplayName("fetchModelInfo: delegates to the underlying client")
+    void shouldDelegateToClientForModelInfo() {
+        String modelName = "meta-llama/Llama-3.1-8B";
+        var modelInfo = new ModelInfo(modelName, true, false, List.of(), null);
+
+        var client = mock(VertxHuggingFaceClientRx.class);
+        when(client.fetchModelInfo(modelName)).thenReturn(Single.just(modelInfo));
+
+        var fetcher = new HuggingFaceDownloader(mock(Vertx.class), client);
+
+        ModelInfo result = fetcher.fetchModelInfo(modelName).blockingGet();
+
+        assertThat(result).isEqualTo(modelInfo);
+        verify(client).fetchModelInfo(modelName);
     }
 }

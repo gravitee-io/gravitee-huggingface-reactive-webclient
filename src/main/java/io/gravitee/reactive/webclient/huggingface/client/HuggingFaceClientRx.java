@@ -15,13 +15,40 @@
  */
 package io.gravitee.reactive.webclient.huggingface.client;
 
+import io.gravitee.reactive.webclient.api.ModelInfo;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Flowable;
+import io.reactivex.rxjava3.core.Single;
+import io.vertx.core.json.JsonObject;
 import io.vertx.rxjava3.core.buffer.Buffer;
 import io.vertx.rxjava3.core.streams.WriteStream;
 
 public interface HuggingFaceClientRx {
     Flowable<String> listModelFiles(String modelName);
+
+    /**
+     * Fetches full model metadata from {@code GET /api/models/{modelName}},
+     * including file list with sizes, gated flag, and safetensors parameter counts.
+     *
+     * <p>Returns a {@link Single} that emits {@link ModelInfo} on success.
+     * On any HTTP or network error the Single terminates with an error signal —
+     * callers should handle it (e.g. {@code .onErrorReturn(e -> null)}) if they
+     * want a soft-fail behaviour.
+     */
+    Single<ModelInfo> fetchModelInfo(String modelName);
+
+    /**
+     * Fetches a single file from a model repository and returns its contents
+     * as a parsed {@link JsonObject}.
+     *
+     * <p>Useful for retrieving {@code config.json}, {@code tokenizer_config.json},
+     * etc. without downloading to disk.
+     *
+     * @param modelName  the model identifier, e.g. {@code "meta-llama/Llama-3-8B"}
+     * @param filePath   relative path within the repo, e.g. {@code "config.json"}
+     * @return a {@link Single} emitting the parsed JSON, or an error signal on failure
+     */
+    Single<JsonObject> fetchFileAsJson(String modelName, String filePath);
 
     Completable downloadModelFile(String modelName, String fileName, WriteStream<Buffer> file);
 }
