@@ -22,4 +22,23 @@ public record FetchModelConfig(String modelName, List<ModelFile> modelFiles, Pat
     public FetchModelConfig(String modelName, List<ModelFile> modelFiles, Path modelDirectory) {
         this(modelName, modelFiles, modelDirectory, null);
     }
+
+    @Override
+    public String toString() {
+        return (
+            "FetchModelConfig[" +
+            "modelName=" +
+            modelName +
+            ", " +
+            "modelFiles=" +
+            modelFiles +
+            ", " +
+            "modelDirectory=" +
+            modelDirectory +
+            ", " +
+            "token=" +
+            (token == null ? "null" : "********") +
+            "]"
+        );
+    }
 }
