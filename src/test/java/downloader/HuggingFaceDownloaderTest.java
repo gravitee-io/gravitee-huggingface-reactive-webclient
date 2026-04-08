@@ -58,7 +58,7 @@ class HuggingFaceDownloaderTest {
         when(fileSystem.rxExists(modelDir.resolve(file.name()).toString())).thenReturn(Single.just(true));
 
         var client = mock(VertxHuggingFaceClientRx.class);
-        when(client.listModelFiles(modelName)).thenReturn(Flowable.just("config.json"));
+        when(client.listModelFiles(modelName, null)).thenReturn(Flowable.just("config.json"));
 
         var service = new HuggingFaceDownloader(vertx, client);
 
@@ -93,8 +93,8 @@ class HuggingFaceDownloaderTest {
         when(fileSystem.rxOpen(eq(modelDir.resolve(file.name()).toString()), any())).thenReturn(Single.just(asyncFile));
 
         var client = mock(VertxHuggingFaceClientRx.class);
-        when(client.listModelFiles(modelName)).thenReturn(Flowable.just(file.name()));
-        when(client.downloadModelFile(modelName, file.name(), asyncFile)).thenReturn(Completable.complete());
+        when(client.listModelFiles(modelName, null)).thenReturn(Flowable.just(file.name()));
+        when(client.downloadModelFile(modelName, file.name(), asyncFile, null)).thenReturn(Completable.complete());
 
         var fetcher = new HuggingFaceDownloader(vertx, client);
 
@@ -108,7 +108,7 @@ class HuggingFaceDownloaderTest {
                 assertThat(result.get(ModelFileType.CONFIG)).contains("temp-model-dir/config.json");
                 return true;
             });
-        verify(client).downloadModelFile(modelName, file.name(), asyncFile);
+        verify(client).downloadModelFile(modelName, file.name(), asyncFile, null);
         verify(asyncFile).close();
     }
 
@@ -129,8 +129,8 @@ class HuggingFaceDownloaderTest {
         when(fileSystem.rxOpen(eq(modelDir.resolve(file.name()).toString()), any())).thenReturn(Single.just(asyncFile));
 
         var client = mock(VertxHuggingFaceClientRx.class);
-        when(client.listModelFiles(modelName)).thenReturn(Flowable.just(file.name()));
-        when(client.downloadModelFile(modelName, file.name(), asyncFile)).thenReturn(Completable.complete());
+        when(client.listModelFiles(modelName, null)).thenReturn(Flowable.just(file.name()));
+        when(client.downloadModelFile(modelName, file.name(), asyncFile, null)).thenReturn(Completable.complete());
 
         var fetcher = new HuggingFaceDownloader(vertx, client);
 
@@ -144,7 +144,7 @@ class HuggingFaceDownloaderTest {
                 assertThat(result.get(ModelFileType.CONFIG)).contains("temp-model-dir/config/config.json");
                 return true;
             });
-        verify(client).downloadModelFile(modelName, file.name(), asyncFile);
+        verify(client).downloadModelFile(modelName, file.name(), asyncFile, null);
         verify(asyncFile).close();
     }
 
@@ -156,7 +156,7 @@ class HuggingFaceDownloaderTest {
         Path modelDir = Path.of("temp-model-dir");
 
         var client = mock(VertxHuggingFaceClientRx.class);
-        when(client.listModelFiles(modelName)).thenReturn(Flowable.just("other_file.json"));
+        when(client.listModelFiles(modelName, null)).thenReturn(Flowable.just("other_file.json"));
 
         var fetcher = new HuggingFaceDownloader(mock(Vertx.class), client);
 
@@ -181,8 +181,8 @@ class HuggingFaceDownloaderTest {
         when(asyncFile.close()).thenReturn(Completable.complete());
 
         var client = mock(VertxHuggingFaceClientRx.class);
-        when(client.listModelFiles(modelName)).thenReturn(Flowable.just("model.onnx"));
-        when(client.downloadModelFile(modelName, "model.onnx", asyncFile))
+        when(client.listModelFiles(modelName, null)).thenReturn(Flowable.just("model.onnx"));
+        when(client.downloadModelFile(modelName, "model.onnx", asyncFile, null))
             .thenReturn(Completable.error(new RuntimeException("network timeout")));
 
         var fetcher = new HuggingFaceDownloader(vertx, client);

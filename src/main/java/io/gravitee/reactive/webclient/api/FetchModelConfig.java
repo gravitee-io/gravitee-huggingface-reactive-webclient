@@ -18,4 +18,8 @@ package io.gravitee.reactive.webclient.api;
 import java.nio.file.Path;
 import java.util.List;
 
-public record FetchModelConfig(String modelName, List<ModelFile> modelFiles, Path modelDirectory) {}
+public record FetchModelConfig(String modelName, List<ModelFile> modelFiles, Path modelDirectory, String token) {
+    public FetchModelConfig(String modelName, List<ModelFile> modelFiles, Path modelDirectory) {
+        this(modelName, modelFiles, modelDirectory, null);
+    }
+}

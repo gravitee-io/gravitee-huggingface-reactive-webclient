@@ -18,10 +18,12 @@ package client;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.ThrowableAssert.catchThrowable;
 
@@ -166,6 +168,100 @@ class VertxHuggingFaceClientRxTest {
         } finally {
             Files.deleteIfExists(tempFile);
         }
+    }
+
+    @Test
+    void shouldListModelFilesWithAuthorizationHeaderWhenTokenProvided() {
+        // given
+        String token = "hf_test_token_123";
+        stubFor(
+            get(urlEqualTo("/api/models/private-org/private-model"))
+                .willReturn(
+                    okJson(
+                        """
+            {
+              "siblings": [
+                { "rfilename": "config.json" }
+              ]
+            }
+        """
+                    )
+                )
+        );
+
+        // when
+        List<String> files = huggingFaceClient.listModelFiles("private-org/private-model", token).toList().blockingGet();
+
+        // then
+        assertThat(files).containsExactly("config.json");
+        verify(
+            getRequestedFor(urlEqualTo("/api/models/private-org/private-model")).withHeader("Authorization", equalTo("Bearer " + token))
+        );
+    }
+
+    @Test
+    void shouldDownloadModelFileWithAuthorizationHeaderWhenTokenProvided() throws IOException {
+        // given
+        String modelName = "private-org/private-model";
+        String fileName = "config.json";
+        String fileContent = """
+            {"key": "value"}
+            """;
+        String token = "hf_test_token_123";
+
+        stubFor(
+            get(urlPathEqualTo("/private-org/private-model/resolve/main/config.json"))
+                .withQueryParam("download", equalTo("true"))
+                .willReturn(aResponse().withStatus(200).withBody(fileContent))
+        );
+
+        Vertx vertx = Vertx.vertx();
+        Path tempFile = Files.createTempFile("hf-test-", ".json");
+        AsyncFile asyncFile = vertx
+            .fileSystem()
+            .rxOpen(tempFile.toString(), new OpenOptions().setCreate(true).setWrite(true).setTruncateExisting(true))
+            .blockingGet();
+
+        try {
+            // when
+            huggingFaceClient.downloadModelFile(modelName, fileName, asyncFile, token).blockingAwait();
+
+            // then
+            String result = Files.readString(tempFile);
+            assertThat(result).isEqualTo(fileContent);
+            verify(
+                getRequestedFor(urlPathEqualTo("/private-org/private-model/resolve/main/config.json"))
+                    .withHeader("Authorization", equalTo("Bearer " + token))
+            );
+        } finally {
+            Files.deleteIfExists(tempFile);
+        }
+    }
+
+    @Test
+    void shouldNotSendAuthorizationHeaderWhenTokenIsNull() {
+        // given
+        stubFor(
+            get(urlEqualTo("/api/models/public-org/public-model"))
+                .willReturn(
+                    okJson(
+                        """
+            {
+              "siblings": [
+                { "rfilename": "model.bin" }
+              ]
+            }
+        """
+                    )
+                )
+        );
+
+        // when
+        List<String> files = huggingFaceClient.listModelFiles("public-org/public-model", null).toList().blockingGet();
+
+        // then
+        assertThat(files).containsExactly("model.bin");
+        verify(getRequestedFor(urlEqualTo("/api/models/public-org/public-model")).withoutHeader("Authorization"));
     }
 
     @Test

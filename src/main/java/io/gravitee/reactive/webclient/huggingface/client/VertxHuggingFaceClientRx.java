@@ -22,6 +22,7 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.rxjava3.core.buffer.Buffer;
 import io.vertx.rxjava3.core.streams.WriteStream;
+import io.vertx.rxjava3.ext.web.client.HttpRequest;
 import io.vertx.rxjava3.ext.web.client.WebClient;
 import io.vertx.rxjava3.ext.web.codec.BodyCodec;
 import java.util.List;
@@ -43,10 +44,11 @@ public class VertxHuggingFaceClientRx implements HuggingFaceClientRx {
     }
 
     @Override
-    public Flowable<String> listModelFiles(String modelName) {
+    public Flowable<String> listModelFiles(String modelName, String token) {
         var request = client.request(HttpMethod.GET, "/api/models/" + modelName);
+        request.putHeader("Accept", "application/json");
+        withBearerToken(request, token);
         return request
-            .putHeader("Accept", "application/json")
             .rxSend()
             .map(response -> response.body().toJsonObject().getJsonArray(SIBLINGS_KEY))
             .flattenAsFlowable(VertxHuggingFaceClientRx::getFileNames)
@@ -56,12 +58,12 @@ public class VertxHuggingFaceClientRx implements HuggingFaceClientRx {
     }
 
     @Override
-    public Completable downloadModelFile(String modelName, String fileName, WriteStream<Buffer> file) {
+    public Completable downloadModelFile(String modelName, String fileName, WriteStream<Buffer> file, String token) {
         log.debug("Downloading file [{}] from model [{}]", fileName, modelName);
         var request = client.request(HttpMethod.GET, String.format(HF_REPO_BASE_URL, modelName, fileName));
+        request.addQueryParam("download", "true").followRedirects(true);
+        withBearerToken(request, token);
         return request
-            .addQueryParam("download", "true")
-            .followRedirects(true)
             .as(BodyCodec.pipe(file))
             .rxSend()
             .flatMapCompletable(response -> {
@@ -82,6 +84,12 @@ public class VertxHuggingFaceClientRx implements HuggingFaceClientRx {
             })
             .doOnComplete(() -> log.info("Downloaded model file [{}] successfully", fileName))
             .doOnError(err -> log.error("Failed to download [{}]: {}", fileName, err.getMessage(), err));
+    }
+
+    private static <T> void withBearerToken(HttpRequest<T> request, String token) {
+        if (token != null && !token.isBlank()) {
+            request.putHeader("Authorization", "Bearer " + token);
+        }
     }
 
     private static List<String> getFileNames(JsonArray siblings) {
