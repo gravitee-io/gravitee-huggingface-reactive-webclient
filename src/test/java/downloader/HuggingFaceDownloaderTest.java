@@ -182,8 +182,9 @@ class HuggingFaceDownloaderTest {
 
         var client = mock(VertxHuggingFaceClientRx.class);
         when(client.listModelFiles(modelName)).thenReturn(Flowable.just("model.onnx"));
-        when(client.downloadModelFile(modelName, "model.onnx", asyncFile))
-            .thenReturn(Completable.error(new RuntimeException("network timeout")));
+        when(client.downloadModelFile(modelName, "model.onnx", asyncFile)).thenReturn(
+            Completable.error(new RuntimeException("network timeout"))
+        );
 
         var fetcher = new HuggingFaceDownloader(vertx, client);
 

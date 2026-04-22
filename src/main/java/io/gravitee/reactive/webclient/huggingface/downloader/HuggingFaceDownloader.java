@@ -54,54 +54,46 @@ public class HuggingFaceDownloader implements ModelFetcher {
             .listModelFiles(config.modelName())
             .toList()
             .flatMapPublisher(availableFiles ->
-                Flowable
-                    .fromIterable(config.modelFiles())
-                    .flatMapSingle(modelFile -> {
-                        if (!availableFiles.contains(modelFile.name())) {
-                            return Single.error(
-                                new ModelFileNotFoundException(
-                                    String.format(
-                                        "Model file not found on HuggingFace: %s for model: %s",
-                                        modelFile.name(),
-                                        config.modelName()
-                                    )
-                                )
-                            );
-                        }
+                Flowable.fromIterable(config.modelFiles()).flatMapSingle(modelFile -> {
+                    if (!availableFiles.contains(modelFile.name())) {
+                        return Single.error(
+                            new ModelFileNotFoundException(
+                                String.format("Model file not found on HuggingFace: %s for model: %s", modelFile.name(), config.modelName())
+                            )
+                        );
+                    }
 
-                        Path outputPath = config.modelDirectory().resolve(modelFile.name());
+                    Path outputPath = config.modelDirectory().resolve(modelFile.name());
 
-                        return vertx
-                            .fileSystem()
-                            .rxExists(outputPath.toString())
-                            .flatMap(exists -> {
-                                if (exists) {
-                                    log.info("Skipping download; file already exists: {}", modelFile.name());
-                                    return Single.just(Map.entry(modelFile.type(), outputPath.toString()));
-                                }
+                    return vertx
+                        .fileSystem()
+                        .rxExists(outputPath.toString())
+                        .flatMap(exists -> {
+                            if (exists) {
+                                log.info("Skipping download; file already exists: {}", modelFile.name());
+                                return Single.just(Map.entry(modelFile.type(), outputPath.toString()));
+                            }
 
-                                boolean isFileInSubDirectory = outputPath.toString().contains("/");
+                            boolean isFileInSubDirectory = outputPath.toString().contains("/");
 
-                                return (
-                                    isFileInSubDirectory ? buildSubDirectoryAndOpenFile(outputPath) : openFile(outputPath)
-                                ).flatMap(file ->
-                                        modelDownloader
-                                            .downloadModelFile(config.modelName(), modelFile.name(), file)
-                                            .doFinally(file::close)
-                                            .andThen(Single.just(Map.entry(modelFile.type(), outputPath.toString())))
-                                            .onErrorResumeNext(err ->
-                                                Single.error(
-                                                    new ModelDownloadFailedException(
-                                                        String.format("Download failed for model: %s", modelFile.name()),
-                                                        err
-                                                    )
+                            return (isFileInSubDirectory ? buildSubDirectoryAndOpenFile(outputPath) : openFile(outputPath)).flatMap(file ->
+                                    modelDownloader
+                                        .downloadModelFile(config.modelName(), modelFile.name(), file)
+                                        .doFinally(file::close)
+                                        .andThen(Single.just(Map.entry(modelFile.type(), outputPath.toString())))
+                                        .onErrorResumeNext(err ->
+                                            Single.error(
+                                                new ModelDownloadFailedException(
+                                                    String.format("Download failed for model: %s", modelFile.name()),
+                                                    err
                                                 )
                                             )
-                                    )
-                                    .doOnSuccess(resp -> log.info("Download completed successfully: {}", modelFile.name()))
-                                    .doOnError(err -> log.error("Download failed", err));
-                            });
-                    })
+                                        )
+                                )
+                                .doOnSuccess(resp -> log.info("Download completed successfully: {}", modelFile.name()))
+                                .doOnError(err -> log.error("Download failed", err));
+                        });
+                })
             )
             .collect(() -> new EnumMap<>(ModelFileType.class), (map, entry) -> map.put(entry.getKey(), entry.getValue()));
     }
