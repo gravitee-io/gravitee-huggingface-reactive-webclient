@@ -17,7 +17,7 @@ package io.gravitee.reactive.webclient.huggingface.client;
 
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Flowable;
-import io.vertx.rxjava3.core.buffer.Buffer;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.rxjava3.core.streams.WriteStream;
 
 public interface HuggingFaceClientRx {
