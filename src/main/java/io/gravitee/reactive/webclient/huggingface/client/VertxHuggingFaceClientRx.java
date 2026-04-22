@@ -17,10 +17,10 @@ package io.gravitee.reactive.webclient.huggingface.client;
 
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Flowable;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.rxjava3.core.buffer.Buffer;
 import io.vertx.rxjava3.core.streams.WriteStream;
 import io.vertx.rxjava3.ext.web.client.WebClient;
 import io.vertx.rxjava3.ext.web.codec.BodyCodec;
@@ -50,7 +50,8 @@ public class VertxHuggingFaceClientRx implements HuggingFaceClientRx {
             .rxSend()
             .map(response -> response.body().toJsonObject().getJsonArray(SIBLINGS_KEY))
             .flattenAsFlowable(VertxHuggingFaceClientRx::getFileNames)
-            .doOnError(t -> log.error("An unexpected error has occurred while list model repository [{}]: {}", modelName, t.getMessage(), t)
+            .doOnError(t ->
+                log.error("An unexpected error has occurred while list model repository [{}]: {}", modelName, t.getMessage(), t)
             )
             .onErrorComplete();
     }
@@ -85,6 +86,9 @@ public class VertxHuggingFaceClientRx implements HuggingFaceClientRx {
     }
 
     private static List<String> getFileNames(JsonArray siblings) {
-        return siblings.stream().map(obj -> ((JsonObject) obj).getString(RFILENAME_KEY)).toList();
+        return siblings
+            .stream()
+            .map(obj -> ((JsonObject) obj).getString(RFILENAME_KEY))
+            .toList();
     }
 }
