@@ -57,20 +57,19 @@ class VertxHuggingFaceClientRxTest {
     void shouldReturnListOfModelFiles() {
         // given
         stubFor(
-            get(urlEqualTo("/api/models/minuva/MiniLMv2-toxic-jigsaw-onnx"))
-                .willReturn(
-                    okJson(
-                        """
-            {
-              "siblings": [
-                { "rfilename": "config.json" },
-                { "rfilename": "tokenizer.json" },
-                { "rfilename": "model_optimized_quantized.onnx" }
-              ]
-            }
-        """
-                    )
+            get(urlEqualTo("/api/models/minuva/MiniLMv2-toxic-jigsaw-onnx")).willReturn(
+                okJson(
+                    """
+                        {
+                          "siblings": [
+                            { "rfilename": "config.json" },
+                            { "rfilename": "tokenizer.json" },
+                            { "rfilename": "model_optimized_quantized.onnx" }
+                          ]
+                        }
+                    """
                 )
+            )
         );
 
         // when
@@ -97,51 +96,50 @@ class VertxHuggingFaceClientRxTest {
         // given
         String modelName = "minuva/MiniLMv2-toxic-jigsaw-onnx";
         String fileName = "config.json";
-        String fileContent =
-            """
-                {
-                  "_name_or_path": "../output/MiniLM-L6-toxic-all-labels-opt",
-                  "architectures": [
-                    "BertForSequenceClassification"
-                  ],
-                  "attention_probs_dropout_prob": 0.1,
-                  "classifier_dropout": null,
-                  "hidden_act": "gelu",
-                  "hidden_dropout_prob": 0.1,
-                  "hidden_size": 384,
-                  "id2label": {
-                    "0": "toxic",
-                    "1": "severe_toxic",
-                    "2": "obscene",
-                    "3": "threat",
-                    "4": "insult",
-                    "5": "identity_hate"
-                  },
-                  "initializer_range": 0.02,
-                  "intermediate_size": 1536,
-                  "label2id": {
-                    "identity_hate": "5",
-                    "insult": "4",
-                    "obscene": "2",
-                    "severe_toxic": "1",
-                    "threat": "3",
-                    "toxic": "0"
-                  },
-                  "layer_norm_eps": 1e-12,
-                  "max_position_embeddings": 512,
-                  "model_type": "bert",
-                  "num_attention_heads": 12,
-                  "num_hidden_layers": 6,
-                  "pad_token_id": 0,
-                  "position_embedding_type": "absolute",
-                  "problem_type": "multi_label_classification",
-                  "torch_dtype": "float32",
-                  "transformers_version": "4.30.0",
-                  "type_vocab_size": 2,
-                  "use_cache": true,
-                  "vocab_size": 30522
-                }
-                """;
+        String fileContent = """
+            {
+              "_name_or_path": "../output/MiniLM-L6-toxic-all-labels-opt",
+              "architectures": [
+                "BertForSequenceClassification"
+              ],
+              "attention_probs_dropout_prob": 0.1,
+              "classifier_dropout": null,
+              "hidden_act": "gelu",
+              "hidden_dropout_prob": 0.1,
+              "hidden_size": 384,
+              "id2label": {
+                "0": "toxic",
+                "1": "severe_toxic",
+                "2": "obscene",
+                "3": "threat",
+                "4": "insult",
+                "5": "identity_hate"
+              },
+              "initializer_range": 0.02,
+              "intermediate_size": 1536,
+              "label2id": {
+                "identity_hate": "5",
+                "insult": "4",
+                "obscene": "2",
+                "severe_toxic": "1",
+                "threat": "3",
+                "toxic": "0"
+              },
+              "layer_norm_eps": 1e-12,
+              "max_position_embeddings": 512,
+              "model_type": "bert",
+              "num_attention_heads": 12,
+              "num_hidden_layers": 6,
+              "pad_token_id": 0,
+              "position_embedding_type": "absolute",
+              "problem_type": "multi_label_classification",
+              "torch_dtype": "float32",
+              "transformers_version": "4.30.0",
+              "type_vocab_size": 2,
+              "use_cache": true,
+              "vocab_size": 30522
+            }
+            """;
 
         stubFor(
             get(urlPathEqualTo("/minuva/MiniLMv2-toxic-jigsaw-onnx/resolve/main/config.json"))
@@ -182,8 +180,7 @@ class VertxHuggingFaceClientRxTest {
 
         Path tempFile = Files.createTempFile("hf-test-", ".json");
 
-        AsyncFile asyncFile = Vertx
-            .vertx()
+        AsyncFile asyncFile = Vertx.vertx()
             .fileSystem()
             .rxOpen(tempFile.toString(), new OpenOptions().setCreate(true).setWrite(true).setTruncateExisting(true))
             .blockingGet();
