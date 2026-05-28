@@ -21,7 +21,15 @@ import io.vertx.rxjava3.core.buffer.Buffer;
 import io.vertx.rxjava3.core.streams.WriteStream;
 
 public interface HuggingFaceClientRx {
-    Flowable<String> listModelFiles(String modelName);
+    default Flowable<String> listModelFiles(String modelName) {
+        return listModelFiles(modelName, null);
+    }
 
-    Completable downloadModelFile(String modelName, String fileName, WriteStream<Buffer> file);
+    Flowable<String> listModelFiles(String modelName, String token);
+
+    default Completable downloadModelFile(String modelName, String fileName, WriteStream<Buffer> file) {
+        return downloadModelFile(modelName, fileName, file, null);
+    }
+
+    Completable downloadModelFile(String modelName, String fileName, WriteStream<Buffer> file, String token);
 }

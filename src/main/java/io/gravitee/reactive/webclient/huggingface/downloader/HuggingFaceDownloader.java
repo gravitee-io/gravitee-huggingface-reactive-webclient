@@ -51,7 +51,7 @@ public class HuggingFaceDownloader implements ModelFetcher {
     @Override
     public Single<Map<ModelFileType, String>> fetchModel(FetchModelConfig config) {
         return modelDownloader
-            .listModelFiles(config.modelName())
+            .listModelFiles(config.modelName(), config.token())
             .toList()
             .flatMapPublisher(availableFiles ->
                 Flowable
@@ -86,7 +86,7 @@ public class HuggingFaceDownloader implements ModelFetcher {
                                     isFileInSubDirectory ? buildSubDirectoryAndOpenFile(outputPath) : openFile(outputPath)
                                 ).flatMap(file ->
                                         modelDownloader
-                                            .downloadModelFile(config.modelName(), modelFile.name(), file)
+                                            .downloadModelFile(config.modelName(), modelFile.name(), file, config.token())
                                             .doFinally(file::close)
                                             .andThen(Single.just(Map.entry(modelFile.type(), outputPath.toString())))
                                             .onErrorResumeNext(err ->
