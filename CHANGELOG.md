@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/gravitee-io/gravitee-huggingface-reactive-webclient/compare/1.1.0...1.1.1) (2026-06-09)
+
+
+### Bug Fixes
+
+* **downloader:** skip HuggingFace listing when all files exist locally ([1441e40](https://github.com/gravitee-io/gravitee-huggingface-reactive-webclient/commit/1441e40f982ceda50a0e03459ff77111103bafa1))
+
 # [1.1.0](https://github.com/gravitee-io/gravitee-huggingface-reactive-webclient/compare/1.0.0...1.1.0) (2025-06-24)
 
 
