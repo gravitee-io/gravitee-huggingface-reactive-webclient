@@ -45,7 +45,7 @@ import org.junit.jupiter.api.Test;
 class HuggingFaceDownloaderTest {
 
     @Test
-    @DisplayName("Should skip download when file exists locally")
+    @DisplayName("Should skip download and HuggingFace listing when file exists locally")
     void shouldSkipDownloadWhenFileExistsLocally() {
         String modelName = "test-model";
         ModelFile file = new ModelFile("config.json", ModelFileType.CONFIG);
@@ -54,11 +54,9 @@ class HuggingFaceDownloaderTest {
         var vertx = mock(Vertx.class);
         var fileSystem = mock(FileSystem.class);
         when(vertx.fileSystem()).thenReturn(fileSystem);
-        when(vertx.fileSystem().mkdirs(any())).thenReturn(Completable.complete());
         when(fileSystem.rxExists(modelDir.resolve(file.name()).toString())).thenReturn(Single.just(true));
 
         var client = mock(VertxHuggingFaceClientRx.class);
-        when(client.listModelFiles(modelName)).thenReturn(Flowable.just("config.json"));
 
         var service = new HuggingFaceDownloader(vertx, client);
 
@@ -73,6 +71,41 @@ class HuggingFaceDownloaderTest {
                 return true;
             });
 
+        verify(client, never()).listModelFiles(any());
+        verify(client, never()).downloadModelFile(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("Should skip HuggingFace listing when all files exist locally")
+    void shouldSkipHuggingFaceWhenAllFilesExistLocally() {
+        String modelName = "test-model";
+        ModelFile configFile = new ModelFile("config.json", ModelFileType.CONFIG);
+        ModelFile modelFile = new ModelFile("model.onnx", ModelFileType.MODEL);
+        Path modelDir = Path.of("temp-model-dir");
+
+        var vertx = mock(Vertx.class);
+        var fileSystem = mock(FileSystem.class);
+        when(vertx.fileSystem()).thenReturn(fileSystem);
+        when(fileSystem.rxExists(modelDir.resolve(configFile.name()).toString())).thenReturn(Single.just(true));
+        when(fileSystem.rxExists(modelDir.resolve(modelFile.name()).toString())).thenReturn(Single.just(true));
+
+        var client = mock(VertxHuggingFaceClientRx.class);
+
+        var service = new HuggingFaceDownloader(vertx, client);
+
+        service
+            .fetchModel(new FetchModelConfig(modelName, List.of(configFile, modelFile), modelDir))
+            .test()
+            .awaitDone(5, TimeUnit.SECONDS)
+            .assertComplete()
+            .assertNoErrors()
+            .assertValue(result -> {
+                assertThat(result.get(ModelFileType.CONFIG)).contains("config.json");
+                assertThat(result.get(ModelFileType.MODEL)).contains("model.onnx");
+                return true;
+            });
+
+        verify(client, never()).listModelFiles(any());
         verify(client, never()).downloadModelFile(any(), any(), any());
     }
 
@@ -155,10 +188,15 @@ class HuggingFaceDownloaderTest {
         ModelFile file = new ModelFile("missing.json", ModelFileType.MODEL);
         Path modelDir = Path.of("temp-model-dir");
 
+        var vertx = mock(Vertx.class);
+        var fileSystem = mock(FileSystem.class);
+        when(vertx.fileSystem()).thenReturn(fileSystem);
+        when(fileSystem.rxExists(modelDir.resolve(file.name()).toString())).thenReturn(Single.just(false));
+
         var client = mock(VertxHuggingFaceClientRx.class);
         when(client.listModelFiles(modelName)).thenReturn(Flowable.just("other_file.json"));
 
-        var fetcher = new HuggingFaceDownloader(mock(Vertx.class), client);
+        var fetcher = new HuggingFaceDownloader(vertx, client);
 
         fetcher.fetchModel(new FetchModelConfig(modelName, List.of(file), modelDir)).test().assertError(ModelFileNotFoundException.class);
     }
